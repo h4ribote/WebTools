@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>利率・利息計算機</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind Custom Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 入力フィールドのスピナー（矢印）を非表示にする */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        
+        <h1 class="text-3xl font-bold mb-8 text-center text-gray-800">利率・利息計算機</h1>
+
+        <!-- 入力セクション -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- 利率入力 -->
+            <div>
+                <label for="rateInput" class="block text-sm font-medium text-gray-700 mb-2">利率 (%)</label>
+                <input type="number" id="rateInput" placeholder="例: 5" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            
+            <!-- 期間選択 -->
+            <div>
+                <label for="periodSelect" class="block text-sm font-medium text-gray-700 mb-2">入力した利率の期間</label>
+                <select id="periodSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <option value="year">年</option>
+                    <option value="month">月</option>
+                    <option value="week">週</option>
+                    <option value="day">日</option>
+                    <option value="hour">時間</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 資産額入力 -->
+        <div class="mb-8">
+            <label for="principalInput" class="block text-sm font-medium text-gray-700 mb-2">資産額 (円)</label>
+            <input type="number" id="principalInput" placeholder="例: 1000000 (任意)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- 計算方法 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">計算方法</label>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calcType" value="simple" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" checked>
+                        <span class="ml-2 text-gray-700">単利</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calcType" value="compound" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300">
+                        <span class="ml-2 text-gray-700">複利</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- 複利の頻度 (デフォルトは非表示) -->
+            <div id="compoundingSection" class="hidden">
+                <label for="compoundingSelect" class="block text-sm font-medium text-gray-700 mb-2">複利の頻度</label>
+                <select id="compoundingSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <option value="year">年1回</option>
+                    <option value="month">月1回</option>
+                    <option value="week">週1回</option>
+                    <option value="day">日1回</option>
+                    <option value="hour">毎時</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 計算ボタン -->
+        <button id="calculateButton" class="w-full p-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+            計算する
+        </button>
+
+        <!-- エラーメッセージ -->
+        <div id="errorContainer" class="text-red-600 mt-4 text-center font-medium"></div>
+
+        <!-- 結果表示セクション -->
+        <div id="resultsContainer" class="mt-10 hidden">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-700">計算結果</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-full border-collapse">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 p-3 text-left text-sm font-semibold text-gray-600">期間</th>
+                            <th id="rateHeader" class="border border-gray-300 p-3 text-left text-sm font-semibold text-gray-600">換算利率 (名目, %)</th>
+                            <th class="border border-gray-300 p-3 text-left text-sm font-semibold text-gray-600">利息 (円)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody" class="divide-y divide-gray-200">
+                        <!-- データはJavaScriptによって挿入されます -->
+                        <tr id="rowYear">
+                            <td class="p-3 font-medium">年</td>
+                            <td id="rateYear" class="p-3"></td>
+                            <td id="interestYear" class="p-3 font-medium"></td>
+                        </tr>
+                        <tr id="rowMonth">
+                            <td class="p-3 font-medium">月</td>
+                            <td id="rateMonth" class="p-3"></td>
+                            <td id="interestMonth" class="p-3 font-medium"></td>
+                        </tr>
+                        <tr id="rowWeek">
+                            <td class="p-3 font-medium">週</td>
+                            <td id="rateWeek" class="p-3"></td>
+                            <td id="interestWeek" class="p-3 font-medium"></td>
+                        </tr>
+                        <tr id="rowDay">
+                            <td class="p-3 font-medium">日</td>
+                            <td id="rateDay" class="p-3"></td>
+                            <td id="interestDay" class="p-3 font-medium"></td>
+                        </tr>
+                        <tr id="rowHour">
+                            <td class="p-3 font-medium">時間</td>
+                            <td id="rateHour" class="p-3"></td>
+                            <td id="interestHour" class="p-3 font-medium"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="interestNote" class="text-xs text-gray-500 mt-4 text-center">※利息は単利で計算されています。</p>
+        </div>
+
+    </div>
+
+    <script>
+        // 定数
+        const DAYS_IN_YEAR = 365.25; // 閏年を考慮
+        const MONTHS_IN_YEAR = 12;
+        const WEEKS_IN_YEAR = DAYS_IN_YEAR / 7; // 約 52.178
+        const DAYS_IN_WEEK = 7;
+        const HOURS_IN_DAY = 24;
+        const HOURS_IN_YEAR = DAYS_IN_YEAR * HOURS_IN_DAY; // 約 8766
+
+        // DOM要素
+        const rateInput = document.getElementById('rateInput');
+        const periodSelect = document.getElementById('periodSelect');
+        const principalInput = document.getElementById('principalInput');
+        // (↓ 追加)
+        const calcTypeRadios = document.querySelectorAll('input[name="calcType"]');
+        const compoundingSection = document.getElementById('compoundingSection');
+        const compoundingSelect = document.getElementById('compoundingSelect');
+        // (↑ 追加)
+        const calculateButton = document.getElementById('calculateButton');
+        const errorContainer = document.getElementById('errorContainer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        // (↓ 追加)
+        const rateHeader = document.getElementById('rateHeader');
+        const interestNote = document.getElementById('interestNote');
+        // (↑ 追加)
+        
+        // 結果表示セル
+        const rateYear = document.getElementById('rateYear');
+        const rateMonth = document.getElementById('rateMonth');
+        const rateWeek = document.getElementById('rateWeek');
+        const rateDay = document.getElementById('rateDay');
+        const rateHour = document.getElementById('rateHour');
+        
+        const interestYear = document.getElementById('interestYear');
+        const interestMonth = document.getElementById('interestMonth');
+        const interestWeek = document.getElementById('interestWeek');
+        const interestDay = document.getElementById('interestDay');
+        const interestHour = document.getElementById('interestHour');
+
+        // 円フォーマッタ
+        const currencyFormatter = new Intl.NumberFormat('ja-JP', {
+            style: 'currency',
+            currency: 'JPY',
+            maximumFractionDigits: 0, // 小数点以下は表示しない
+        });
+
+        // 利率フォーマッタ (小数点以下8桁まで)
+        const rateFormatter = (rate) => {
+            return (rate * 100).toFixed(8);
+        };
+
+        // イベントリスナー
+        calculateButton.addEventListener('click', calculateRates);
+
+        // (↓ 追加)
+        calcTypeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                const selectedCalcType = radio.value;
+                if (selectedCalcType === 'compound') {
+                    compoundingSection.classList.remove('hidden');
+                    // 入力期間を複利頻度のデフォルトに設定
+                    compoundingSelect.value = periodSelect.value;
+                } else {
+                    compoundingSection.classList.add('hidden');
+                }
+            });
+        });
+        
+        // 期間選択が変更されたら、複利頻度のデフォルトも連動
+        periodSelect.addEventListener('change', () => {
+            const selectedCalcType = document.querySelector('input[name="calcType"]:checked').value;
+            if (selectedCalcType === 'compound') {
+                compoundingSelect.value = periodSelect.value;
+            }
+        });
+        // (↑ 追加)
+
+
+        function calculateRates() {
+            // 1. 入力値の取得
+            const rate = parseFloat(rateInput.value);
+            const period = periodSelect.value;
+            const principal = parseFloat(principalInput.value);
+            // (↓ 追加)
+            const calcType = document.querySelector('input[name="calcType"]:checked').value;
+            const compoundingFrequency = compoundingSelect.value;
+            // (↑ 追加)
+
+            // 2. バリデーション
+            if (isNaN(rate) || rate < 0) {
+                errorContainer.textContent = '有効な利率（0以上の数値）を入力してください。';
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+            if (!isNaN(principal) && principal < 0) {
+                errorContainer.textContent = '資産額は0以上の数値を入力してください。';
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            // エラーをクリア
+            errorContainer.textContent = '';
+
+            // 3. 基準利率（名目年率）への換算 (APR)
+            const rateDecimal = rate / 100; // %を小数に
+            let nominalAnnualRate = 0; // 名目年率 (APR)
+
+            switch (period) {
+                case "year":
+                    nominalAnnualRate = rateDecimal;
+                    break;
+                case "month":
+                    nominalAnnualRate = rateDecimal * MONTHS_IN_YEAR;
+                    break;
+                case "week":
+                    nominalAnnualRate = rateDecimal * WEEKS_IN_YEAR;
+                    break;
+                case "day":
+                    nominalAnnualRate = rateDecimal * DAYS_IN_YEAR;
+                    break;
+                case "hour":
+                    nominalAnnualRate = rateDecimal * HOURS_IN_YEAR;
+                    break;
+            }
+
+            // 4. 計算方法によって利率と利息を計算
+            let rates = {};
+            let interests = {};
+            const hasPrincipal = !isNaN(principal) && principal > 0;
+
+            if (calcType === 'simple') {
+                // --- 単利計算 ---
+                rateHeader.textContent = '換算利率 (名目, %)';
+                interestNote.textContent = '※利息は単利で計算されています。';
+
+                rates = {
+                    year: nominalAnnualRate,
+                    month: nominalAnnualRate / MONTHS_IN_YEAR,
+                    week: nominalAnnualRate / WEEKS_IN_YEAR,
+                    day: nominalAnnualRate / DAYS_IN_YEAR,
+                    hour: nominalAnnualRate / HOURS_IN_YEAR
+                };
+
+                interests = {
+                    year: hasPrincipal ? principal * rates.year : 0,
+                    month: hasPrincipal ? principal * rates.month : 0,
+                    week: hasPrincipal ? principal * rates.week : 0,
+                    day: hasPrincipal ? principal * rates.day : 0,
+                    hour: hasPrincipal ? principal * rates.hour : 0
+                };
+
+            } else {
+                // --- 複利計算 ---
+                rateHeader.textContent = '換算利率 (実効, %)';
+                interestNote.textContent = '※利率は実効利率、利息は複利計算に基づいています。';
+
+                // 4B-1. 年間の複利計算回数 (n)
+                let n_compound = 0;
+                switch (compoundingFrequency) {
+                    case "year": n_compound = 1; break;
+                    case "month": n_compound = MONTHS_IN_YEAR; break;
+                    case "week": n_compound = WEEKS_IN_YEAR; break;
+                    case "day": n_compound = DAYS_IN_YEAR; break;
+                    case "hour": n_compound = HOURS_IN_YEAR; break;
+                }
+
+                // 4B-2. 実効年率 (EAR) の計算
+                // EAR = (1 + APR / n)^n - 1
+                const ratePerCompoundPeriod = nominalAnnualRate / n_compound;
+                const effectiveAnnualRate = Math.pow(1 + ratePerCompoundPeriod, n_compound) - 1;
+
+                // 4B-3. 各期間の実効利率の計算 (EARから換算)
+                // (1 + EAR_period) = (1 + EAR)^(1 / n_periods_in_year)
+                rates = {
+                    year: effectiveAnnualRate,
+                    month: Math.pow(1 + effectiveAnnualRate, 1 / MONTHS_IN_YEAR) - 1,
+                    week: Math.pow(1 + effectiveAnnualRate, 1 / WEEKS_IN_YEAR) - 1,
+                    day: Math.pow(1 + effectiveAnnualRate, 1 / DAYS_IN_YEAR) - 1,
+                    hour: Math.pow(1 + effectiveAnnualRate, 1 / HOURS_IN_YEAR) - 1
+                };
+                
+                // 4B-4. 各期間の利息の計算
+                interests = {
+                    year: hasPrincipal ? principal * rates.year : 0,
+                    month: hasPrincipal ? principal * rates.month : 0,
+                    week: hasPrincipal ? principal * rates.week : 0,
+                    day: hasPrincipal ? principal * rates.day : 0,
+                    hour: hasPrincipal ? principal * rates.hour : 0
+                };
+            }
+
+
+            // 5. 結果の表示 (以前はステップ6)
+            rateYear.textContent = rateFormatter(rates.year);
+            rateMonth.textContent = rateFormatter(rates.month);
+            rateWeek.textContent = rateFormatter(rates.week);
+            rateDay.textContent = rateFormatter(rates.day);
+            rateHour.textContent = rateFormatter(rates.hour);
+
+            // 選択された入力期間の行をハイライト
+            document.querySelectorAll('#resultsBody tr').forEach(row => {
+                row.classList.remove('bg-blue-50');
+            });
+            document.getElementById(`row${period.charAt(0).toUpperCase() + period.slice(1)}`).classList.add('bg-blue-50');
+
+            const placeholder = hasPrincipal ? '' : '-';
+            
+            interestYear.textContent = hasPrincipal ? currencyFormatter.format(interests.year) : placeholder;
+            interestMonth.textContent = hasPrincipal ? currencyFormatter.format(interests.month) : placeholder;
+            interestWeek.textContent = hasPrincipal ? currencyFormatter.format(interests.week) : placeholder;
+            interestDay.textContent = hasPrincipal ? currencyFormatter.format(interests.day) : placeholder;
+            interestHour.textContent = hasPrincipal ? currencyFormatter.format(interests.hour) : placeholder;
+            
+            resultsContainer.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
+
