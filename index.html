@@ -4,13 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tool Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Tool Hub</h1>
-    <p>Welcome to the Tool Hub. Please select a tool from the list below:</p>
-    <ul>
-        <li><a href="pages/interest_calculator.html">複利計算</a></li>
-        <li><a href="pages/some_vegetables.html">野菜名生成</a></li>
-    </ul>
+<body class="bg-gray-100 font-sans">
+
+    <div class="min-h-screen flex items-center justify-center p-4">
+        
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">
+                Tool Hub
+            </h1>
+            <p class="text-center text-gray-500 mb-8">
+                利用したいツールを選択してください。
+            </p>
+
+            <div class="space-y-4">
+                
+                <a href="pages/interest_calculator.html" 
+                   class="block p-5 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200">
+                    <h2 class="text-xl font-semibold text-blue-600 mb-1">複利計算</h2>
+                    <p class="text-gray-600 text-sm">年利、月利、日利などの換算や利息を計算します。</p>
+                </a>
+                
+                <a href="pages/some_vegetables.html" 
+                   class="block p-5 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200">
+                    <h2 class="text-xl font-semibold text-green-600 mb-1">野菜名生成</h2>
+                    <p class="text-gray-600 text-sm">ランダムな野菜の名前を生成します。</p>
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
 </body>
 </html>
