@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>some-vegetables</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #result-display, #generate-btn {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen font-sans">
+
+    <div class="text-center p-4">
+        <h1 class="text-2xl font-bold text-gray-500 mb-4">Some Vegetables</h1>
+        
+        <div id="result-container" class="relative mb-6">
+            <p id="result-display" class="text-3xl md:text-4xl font-mono bg-white border border-gray-300 rounded-lg py-4 px-6 cursor-pointer select-none hover:bg-gray-100 hover:border-gray-400">
+            </p>
+            <span id="copy-feedback" class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sm text-green-600 font-bold opacity-0 transition-opacity">
+                Copied!
+            </span>
+        </div>
+
+        <button id="generate-btn" class="bg-gray-800 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Generate New Name
+        </button>
+    </div>
+
+    <script>
+        const adjectives = [
+            "Fresh", "Ripe", "Crisp", "Sweet", "Bitter", "Sour", "Spicy", "Mild", "Large", "Small", 
+            "Big", "Tiny", "Round", "Long", "Red", "Green", "Yellow", "Orange", "Purple", "White", 
+            "Organic", "Local", "Homegrown", "Seasonal", "Raw", "Cooked", "Roasted", "Grilled", 
+            "Steamed", "Boiled", "Fried", "Pickled", "Sliced", "Diced", "Chopped", "Whole", "Tender", 
+            "Firm", "Juicy", "Earthy", "Pungent", "Tangy", "Flavorful", "Delicious", "Crunchy", 
+            "Vibrant", "Colorful", "Baby", "Leafy", "Root", "Smooth", "Heirloom", "Waxy", "Fibrous", "Hearty"
+        ];
+
+        const vegetables = [
+            "Carrot", "Onion", "Potato", "Tomato", "Cabbage", "Lettuce", "Spinach", "Broccoli", 
+            "Cauliflower", "Pepper", "Cucumber", "Eggplant", "Pumpkin", "Squash", "Zucchini", 
+            "Garlic", "Ginger", "Radish", "Turnip", "Beetroot", "Celery", "Asparagus", "Corn", 
+            "Peas", "Beans", "Mushroom", "Kale", "Leek", "Olive", "Yam", "Parsnip", "Artichoke", 
+            "Fennel", "Okra", "Endive", "Jicama", "Kohlrabi", "Rutabaga", "Shallot", "Chard", 
+            "Arugula", "Watercress", "Wasabi", "Daikon", "Taro", "Chicory", "Collard", "Mustard", 
+            "Lentil", "Parsley", "Rhubarb", "Bamboo", "Chive", "Radicchio"
+        ];
+
+        const resultDisplay = document.getElementById('result-display');
+        const generateBtn = document.getElementById('generate-btn');
+        const copyFeedback = document.getElementById('copy-feedback');
+
+        let feedbackTimeout;
+
+        function generateName() {
+            const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+            const randomVegetable = vegetables[Math.floor(Math.random() * vegetables.length)];
+            resultDisplay.textContent = `${randomAdjective}-${randomVegetable}`;
+        }
+
+        resultDisplay.addEventListener('click', () => {
+            const textToCopy = resultDisplay.textContent;
+            if (!textToCopy) return;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            textArea.style.position = "fixed";
+            textArea.style.top = "-9999px";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                copyFeedback.classList.add('opacity-100');
+                
+                clearTimeout(feedbackTimeout);
+
+                feedbackTimeout = setTimeout(() => {
+                    copyFeedback.classList.remove('opacity-100');
+                }, 1500);
+
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        });
+
+        generateBtn.addEventListener('click', generateName);
+
+        document.addEventListener('DOMContentLoaded', generateName);
+    </script>
+</body>
+</html>
