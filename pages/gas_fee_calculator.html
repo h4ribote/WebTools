@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Fee Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Interフォントを読み込む */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* スピナー（数値入力の矢印）を非表示にする */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-lg">
+        <h1 class="text-3xl font-bold text-center mb-8 text-indigo-400">ガス代計算シミュレーター</h1>
+
+        <!-- 入力フォーム -->
+        <div class="space-y-6">
+            <!-- トークン価格 -->
+            <div>
+                <label for="tokenPrice" class="block text-sm font-medium text-gray-400 mb-2">ネイティブトークンの価格（例: USD）</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                    <input type="number" id="tokenPrice" placeholder="3000" class="w-full pl-7 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
+                </div>
+            </div>
+
+            <!-- ガス使用量 -->
+            <div>
+                <label for="gasUsed" class="block text-sm font-medium text-gray-400 mb-2">使用ガス量 (Gas Limit)</label>
+                <input type="number" id="gasUsed" value="21000" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
+            </div>
+
+            <!-- ベースフィー -->
+            <div>
+                <label for="baseFee" class="block text-sm font-medium text-gray-400 mb-2">ベースフィー (Gwei)</label>
+                <input type="number" id="baseFee" placeholder="10" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
+            </div>
+
+            <!-- 優先フィー -->
+            <div>
+                <label for="priorityFee" class="block text-sm font-medium text-gray-400 mb-2">優先フィー (Gwei)</label>
+                <input type="number" id="priorityFee" placeholder="2" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
+            </div>
+        </div>
+
+        <!-- 計算結果 -->
+        <div class="mt-8 pt-6 border-t border-gray-700 space-y-4">
+            <h2 class="text-xl font-semibold text-center mb-4">計算結果</h2>
+            
+            <!-- 合計 Gwei -->
+            <div class="flex justify-between items-center bg-gray-700 px-4 py-3 rounded-lg">
+                <span class="text-gray-400">合計 (Gwei):</span>
+                <span id="resultGwei" class="text-xl font-bold text-white">0</span>
+            </div>
+
+            <!-- 合計 Native Token -->
+            <div class="flex justify-between items-center bg-gray-700 px-4 py-3 rounded-lg">
+                <span class="text-gray-400">合計 (Native Token):</span>
+                <span id="resultNative" class="text-xl font-bold text-indigo-300">0</span>
+            </div>
+
+            <!-- 合計 Fiat -->
+            <div class="flex justify-between items-center bg-gray-700 px-4 py-3 rounded-lg">
+                <span class="text-gray-400">合計 (Fiat):</span>
+                <span id="resultFiat" class="text-xl font-bold text-green-400">$0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 定数
+        const GWEI_PER_TOKEN = 1_000_000_000;
+
+        // DOM要素の取得
+        const tokenPriceInput = document.getElementById('tokenPrice');
+        const gasUsedInput = document.getElementById('gasUsed');
+        const baseFeeInput = document.getElementById('baseFee');
+        const priorityFeeInput = document.getElementById('priorityFee');
+
+        const resultGweiEl = document.getElementById('resultGwei');
+        const resultNativeEl = document.getElementById('resultNative');
+        const resultFiatEl = document.getElementById('resultFiat');
+
+        // 計算関数
+        function calculateFee() {
+            // 1. 入力値の取得 (数値に変換)
+            const tokenPrice = parseFloat(tokenPriceInput.value) || 0;
+            const gasUsed = parseFloat(gasUsedInput.value) || 0;
+            const baseFee = parseFloat(baseFeeInput.value) || 0;
+            const priorityFee = parseFloat(priorityFeeInput.value) || 0;
+
+            // 2. 手数料の計算
+            // 合計ガス価格 (Gwei) = ベースフィー + 優先フィー
+            const totalGasPriceGwei = baseFee + priorityFee;
+            
+            // 合計手数料 (Gwei) = 合計ガス価格 × 使用ガス量
+            const totalFeeGwei = totalGasPriceGwei * gasUsed;
+
+            // 合計手数料 (Native Token) = 合計手数料 (Gwei) / 10^9
+            const totalFeeNative = totalFeeGwei / GWEI_PER_TOKEN;
+
+            // 合計手数料 (Fiat) = 合計手数料 (Native Token) × トークン価格
+            const totalFeeFiat = totalFeeNative * tokenPrice;
+
+            // 3. 結果の表示
+            // toLocaleString() で数値を読みやすくフォーマットする
+            resultGweiEl.textContent = totalFeeGwei.toLocaleString('ja-JP');
+            
+            // toFixed(10) で小数点以下の桁数を調整
+            resultNativeEl.textContent = totalFeeNative.toFixed(10); 
+            
+            // $ 表示に変更し、小数点以下の最大桁数を 6 に変更
+            resultFiatEl.textContent = `$${totalFeeFiat.toLocaleString('ja-JP', { maximumFractionDigits: 6, minimumFractionDigits: 2 })}`;
+        }
+
+        // イベントリスナーの設定
+        const inputs = [tokenPriceInput, gasUsedInput, baseFeeInput, priorityFeeInput];
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateFee);
+        });
+
+        // 初期読み込み時にも計算を実行
+        calculateFee();
+
+    </script>
+
+</body>
+</html>
