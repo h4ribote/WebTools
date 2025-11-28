@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Home</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #202124;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --radius: 24px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #202124;
+                --card-bg: #303134;
+                --text-color: #e8eaed;
+                --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .google-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        .google-logo span:nth-child(1) { color: #4285F4; }
+        .google-logo span:nth-child(2) { color: #EA4335; }
+        .google-logo span:nth-child(3) { color: #FBBC05; }
+        .google-logo span:nth-child(4) { color: #4285F4; }
+        .google-logo span:nth-child(5) { color: #34A853; }
+        .google-logo span:nth-child(6) { color: #EA4335; }
+
+        form {
+            display: flex;
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            background: var(--card-bg);
+            padding: 5px 15px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            background: transparent;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: var(--shadow);
+            margin-bottom: 8px;
+            transition: transform 0.1s;
+        }
+
+        .icon-box:active {
+            transform: scale(0.95);
+        }
+
+        .icon-box img {
+            width: 28px;
+            height: 28px;
+        }
+
+        @media (max-width: 360px) {
+            .shortcut-grid {
+                gap: 10px;
+            }
+            .icon-box {
+                width: 48px;
+                height: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="search-container">
+        <div class="google-logo">
+            <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+        </div>
+        <form action="https://www.google.com/search" method="get">
+            <input type="text" name="q" placeholder="Google 検索" autocomplete="off" autofocus>
+            <button type="submit">🔍</button>
+        </form>
+    </div>
+
+    <div class="shortcut-grid">
+        
+        <a href="https://www.yahoo.co.jp/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=www.yahoo.co.jp&sz=64" alt="Icon"></div>
+            <span>Yahoo!</span>
+        </a>
+
+        <a href="https://www.youtube.com/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=www.youtube.com&sz=64" alt="Icon"></div>
+            <span>YouTube</span>
+        </a>
+
+        <a href="https://twitter.com/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=twitter.com&sz=64" alt="Icon"></div>
+            <span>X</span>
+        </a>
+
+        <a href="https://www.instagram.com/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=www.instagram.com&sz=64" alt="Icon"></div>
+            <span>Insta</span>
+        </a>
+
+        <a href="https://www.amazon.co.jp/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=www.amazon.co.jp&sz=64" alt="Icon"></div>
+            <span>Amazon</span>
+        </a>
+
+        <a href="https://news.google.com/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=news.google.com&sz=64" alt="Icon"></div>
+            <span>News</span>
+        </a>
+
+        <a href="https://weather.yahoo.co.jp/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=weather.yahoo.co.jp&sz=64" alt="Icon"></div>
+            <span>天気</span>
+        </a>
+
+        <a href="https://mail.google.com/" class="shortcut-item">
+            <div class="icon-box"><img src="https://www.google.com/s2/favicons?domain=mail.google.com&sz=64" alt="Icon"></div>
+            <span>Gmail</span>
+        </a>
+
+    </div>
+
+</body>
+</html>
