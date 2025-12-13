@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torn Market Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .torn-card {
+            background-color: #2d2d2d;
+            transition: all 0.3s ease;
+        }
+        .torn-input {
+            background-color: #3d3d3d;
+            border: 1px solid #555;
+            color: white;
+        }
+        .torn-input:focus {
+            outline: none;
+            border-color: #888;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        .price-alert {
+            animation: pulse-red 2s infinite;
+            border: 2px solid #ef4444;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- Header & Config -->
+    <div class="max-w-6xl mx-auto space-y-6">
+        <header class="flex flex-col md:flex-row justify-between items-center bg-gray-800 p-4 rounded-lg shadow-lg border-l-4 border-blue-500">
+            <div class="flex items-center gap-3 mb-4 md:mb-0">
+                <i class="fa-solid fa-chart-line text-2xl text-blue-400"></i>
+                <h1 class="text-2xl font-bold">Torn Market Watcher</h1>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
+                <div class="relative w-full md:w-64">
+                    <input type="password" id="apiKeyInput" placeholder="API Keyを入力" class="torn-input w-full px-3 py-2 rounded">
+                </div>
+                <button onclick="fetchItems()" id="loadItemsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition w-full md:w-auto flex justify-center items-center gap-2">
+                    <span id="loadItemsText">アイテム一覧取得</span>
+                    <div id="loadItemsSpinner" class="loader hidden"></div>
+                </button>
+                <button onclick="testAudio()" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded transition text-sm" title="音声をテスト再生">
+                    <i class="fa-solid fa-volume-high"></i> テスト
+                </button>
+            </div>
+        </header>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="hidden p-4 rounded bg-yellow-900/50 border border-yellow-600 text-yellow-200 text-sm"></div>
+
+        <!-- Add Monitor Item Form -->
+        <div id="monitorForm" class="bg-gray-800 p-6 rounded-lg shadow-lg hidden">
+            <h2 class="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">監視アイテム追加</h2>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                
+                <!-- Item Search/Select -->
+                <div class="md:col-span-6 relative">
+                    <label class="block text-xs text-gray-400 mb-1">アイテム名検索</label>
+                    <input type="text" id="itemSearch" list="itemList" placeholder="アイテム名を入力..." class="torn-input w-full px-3 py-2 rounded" onchange="onItemSelect()">
+                    <datalist id="itemList"></datalist>
+                    <input type="hidden" id="selectedItemId">
+                    <input type="hidden" id="selectedItemImage">
+                    <input type="hidden" id="selectedItemSellPrice">
+                </div>
+
+                <!-- Target Price -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs text-gray-400 mb-1">通知価格 ($)</label>
+                    <input type="number" id="targetPrice" placeholder="例: 5000" class="torn-input w-full px-3 py-2 rounded">
+                </div>
+
+                <!-- Add Button -->
+                <div class="md:col-span-3 flex items-end">
+                    <button onclick="addToWatchList()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full transition">
+                        <i class="fa-solid fa-plus"></i> 追加
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Selected Item Preview -->
+            <div id="previewArea" class="mt-4 flex items-center gap-4 text-sm text-gray-400 hidden">
+                <img id="previewImage" src="" alt="" class="w-10 h-10 object-contain bg-gray-700 rounded p-1">
+                <div>
+                    <span id="previewName" class="font-bold text-white"></span>
+                    <span class="mx-2">|</span>
+                    NPC売値: $<span id="previewSellPrice"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitoring Control -->
+        <div id="controlPanel" class="flex justify-between items-center hidden">
+            <h2 class="text-xl font-bold">監視リスト (<span id="watchCount">0</span>)</h2>
+            <div class="flex gap-2">
+                <button id="toggleMonitorBtn" onclick="toggleMonitoring()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> 監視開始
+                </button>
+            </div>
+        </div>
+
+        <!-- Watch List Grid -->
+        <div id="watchListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Cards will be injected here -->
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioAlert" src="./static/alert.mp3" preload="auto"></audio>
+
+    <script>
+        // --- Configuration & State ---
+        const ITEMS_API_URL = "https://api.torn.com/torn/?selections=items";
+        const MARKET_API_URL_BASE = "https://api.torn.com/v2/market/"; // {id}/itemmarket
+        
+        // 状態変数
+        let apiKey = "";
+        let allItems = {}; // APIから取得したアイテムデータ
+        let watchList = []; // 監視対象アイテムのリスト
+        let isMonitoring = false;
+        let monitorIntervalId = null;
+        let currentMonitorIndex = 0;
+        
+        // ローカルストレージから復元
+        window.onload = () => {
+            const savedKey = localStorage.getItem("tornApiKey");
+            if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+            
+            const savedList = localStorage.getItem("tornWatchList");
+            if (savedList) {
+                watchList = JSON.parse(savedList);
+                renderWatchList();
+                updateWatchCount();
+                if(watchList.length > 0) {
+                     document.getElementById("controlPanel").classList.remove("hidden");
+                }
+            }
+        };
+
+        // --- Helper Functions ---
+        function showStatus(msg, type = 'info') {
+            const el = document.getElementById("statusMessage");
+            el.textContent = msg;
+            el.className = `p-4 rounded border text-sm mb-4 block ${
+                type === 'error' ? 'bg-red-900/50 border-red-600 text-red-200' :
+                type === 'success' ? 'bg-green-900/50 border-green-600 text-green-200' :
+                'bg-blue-900/50 border-blue-600 text-blue-200'
+            }`;
+            el.classList.remove("hidden");
+            setTimeout(() => el.classList.add("hidden"), 5000);
+        }
+
+        function formatMoney(amount) {
+            return '$' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function testAudio() {
+            const audio = document.getElementById("audioAlert");
+            audio.volume = 0.5;
+            audio.play().catch(e => showStatus("音声再生に失敗しました。ブラウザの設定を確認してください。", "error"));
+        }
+
+        // --- Core Logic 1: Fetch Items ---
+        async function fetchItems() {
+            const inputKey = document.getElementById("apiKeyInput").value.trim();
+            if (!inputKey) {
+                showStatus("API Keyを入力してください", "error");
+                return;
+            }
+            apiKey = inputKey;
+            localStorage.setItem("tornApiKey", apiKey);
+
+            // UI Update
+            const btn = document.getElementById("loadItemsBtn");
+            const spinner = document.getElementById("loadItemsSpinner");
+            const text = document.getElementById("loadItemsText");
+            
+            btn.disabled = true;
+            spinner.classList.remove("hidden");
+            text.textContent = "取得中...";
+
+            try {
+                const response = await fetch(`${ITEMS_API_URL}&key=${apiKey}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.error || "Unknown API Error");
+                }
+
+                allItems = data.items;
+                populateDatalist();
+                
+                document.getElementById("monitorForm").classList.remove("hidden");
+                document.getElementById("controlPanel").classList.remove("hidden");
+                showStatus(`アイテム一覧を取得しました (${Object.keys(allItems).length}件)`, "success");
+
+            } catch (err) {
+                showStatus(`取得エラー: ${err.message}`, "error");
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add("hidden");
+                text.textContent = "アイテム一覧再取得";
+            }
+        }
+
+        function populateDatalist() {
+            const datalist = document.getElementById("itemList");
+            datalist.innerHTML = "";
+            
+            // アイテム名でソートして追加
+            Object.keys(allItems).sort((a, b) => allItems[a].name.localeCompare(allItems[b].name)).forEach(id => {
+                const item = allItems[id];
+                const option = document.createElement("option");
+                option.value = item.name;
+                option.dataset.id = id; // datalistでは直接属性を取得しにくいが念のため
+                datalist.appendChild(option);
+            });
+        }
+
+        function onItemSelect() {
+            const name = document.getElementById("itemSearch").value;
+            const previewArea = document.getElementById("previewArea");
+            
+            // 名前からIDを検索
+            const id = Object.keys(allItems).find(key => allItems[key].name === name);
+
+            if (id) {
+                const item = allItems[id];
+                document.getElementById("selectedItemId").value = id;
+                document.getElementById("selectedItemImage").value = item.image;
+                document.getElementById("selectedItemSellPrice").value = item.sell_price;
+                
+                // Preview
+                document.getElementById("previewImage").src = item.image;
+                document.getElementById("previewName").textContent = item.name;
+                document.getElementById("previewSellPrice").textContent = formatMoney(item.sell_price);
+                previewArea.classList.remove("hidden");
+            } else {
+                previewArea.classList.add("hidden");
+                document.getElementById("selectedItemId").value = "";
+            }
+        }
+
+        // --- Core Logic 2: Watch List Management ---
+        function addToWatchList() {
+            const id = document.getElementById("selectedItemId").value;
+            const name = document.getElementById("itemSearch").value;
+            const price = parseInt(document.getElementById("targetPrice").value);
+            const image = document.getElementById("selectedItemImage").value;
+            const sellPrice = document.getElementById("selectedItemSellPrice").value;
+
+            if (!id || !price) {
+                showStatus("アイテムを選択し、価格を入力してください", "error");
+                return;
+            }
+
+            // 重複チェック
+            if (watchList.some(item => item.id === id)) {
+                showStatus("このアイテムは既に監視リストにあります", "error");
+                return;
+            }
+
+            const newItem = {
+                id: id,
+                name: name,
+                targetPrice: price,
+                sellPrice: sellPrice,
+                image: image,
+                listings: [],
+                lastUpdate: null,
+                isAlert: false,
+                loading: false,
+                error: null
+            };
+
+            watchList.push(newItem);
+            saveWatchList();
+            renderWatchList();
+            updateWatchCount();
+            
+            // Reset Form
+            document.getElementById("itemSearch").value = "";
+            document.getElementById("targetPrice").value = "";
+            document.getElementById("previewArea").classList.add("hidden");
+        }
+
+        function removeFromWatchList(id) {
+            watchList = watchList.filter(item => item.id !== id);
+            saveWatchList();
+            renderWatchList();
+            updateWatchCount();
+        }
+
+        function saveWatchList() {
+            localStorage.setItem("tornWatchList", JSON.stringify(watchList));
+        }
+
+        function updateWatchCount() {
+            document.getElementById("watchCount").textContent = watchList.length;
+        }
+
+        // --- Core Logic 3: Market Monitoring ---
+        function toggleMonitoring() {
+            const btn = document.getElementById("toggleMonitorBtn");
+            
+            if (isMonitoring) {
+                // Stop
+                isMonitoring = false;
+                clearTimeout(monitorIntervalId);
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> 監視開始';
+                btn.classList.remove("bg-red-600", "hover:bg-red-700");
+                btn.classList.add("bg-green-600", "hover:bg-green-700");
+                // Reset loading states
+                watchList.forEach(item => item.loading = false);
+                renderWatchList();
+            } else {
+                // Start
+                if (watchList.length === 0) {
+                    showStatus("監視リストが空です", "error");
+                    return;
+                }
+                isMonitoring = true;
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i> 監視停止';
+                btn.classList.remove("bg-green-600", "hover:bg-green-700");
+                btn.classList.add("bg-red-600", "hover:bg-red-700");
+                
+                currentMonitorIndex = 0;
+                monitorLoop();
+            }
+        }
+
+        async function monitorLoop() {
+            if (!isMonitoring) return;
+
+            if (watchList.length === 0) {
+                toggleMonitoring();
+                return;
+            }
+
+            // インデックスの管理
+            if (currentMonitorIndex >= watchList.length) {
+                currentMonitorIndex = 0;
+            }
+
+            const item = watchList[currentMonitorIndex];
+            await checkItemMarket(item);
+
+            currentMonitorIndex++;
+
+            // 次のアイテムへの待機時間 (2秒間隔)
+            // Tornの制限は概ね100req/min。2秒に1回なら30req/minで安全。
+            monitorIntervalId = setTimeout(monitorLoop, 1000);
+        }
+
+        async function checkItemMarket(item) {
+            // Update UI to show loading
+            item.loading = true;
+            renderItemCard(item); // 部分更新推奨だが、今回は全リスト再描画でシンプルに実装
+
+            try {
+                // Fetch V2 API
+                const url = `${MARKET_API_URL_BASE}${item.id}/itemmarket?limit=50`; // 少し多めに取得して集計
+                const response = await fetch(url, {
+                    headers: {
+                        'accept': 'application/json',
+                        'Authorization': `ApiKey ${apiKey}`
+                    }
+                });
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.error || "API Error");
+                }
+
+                // Process Listings
+                const listings = data.itemmarket.listings || [];
+                
+                // 集計ロジック: 同じ価格をまとめる
+                const aggregated = [];
+                listings.forEach(listing => {
+                    if (aggregated.length > 0 && aggregated[aggregated.length - 1].price === listing.price) {
+                        aggregated[aggregated.length - 1].amount += listing.amount;
+                    } else {
+                        aggregated.push({ price: listing.price, amount: listing.amount });
+                    }
+                });
+
+                // 上位3件を取得
+                item.listings = aggregated.slice(0, 3);
+                item.lastUpdate = new Date();
+                item.error = null;
+
+                // Check Alert Condition
+                const lowestPrice = item.listings.length > 0 ? item.listings[0].price : Infinity;
+                
+                if (lowestPrice <= item.targetPrice) {
+                    if (!item.isAlert) {
+                        // 新規アラートの場合のみ音を鳴らす（または毎回鳴らす設定も可）
+                        playAlertSound();
+                    }
+                    item.isAlert = true;
+                } else {
+                    item.isAlert = false;
+                }
+
+            } catch (err) {
+                console.error(err);
+                item.error = err.message;
+            } finally {
+                item.loading = false;
+                renderItemCard(item);
+                saveWatchList(); // 最新データを保存
+            }
+        }
+
+        function playAlertSound() {
+            const audio = document.getElementById("audioAlert");
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+            audio.play().catch(e => console.log("Audio autoplay blocked"));
+        }
+
+        // --- Rendering ---
+        function renderWatchList() {
+            const container = document.getElementById("watchListGrid");
+            container.innerHTML = "";
+            watchList.forEach(item => {
+                container.appendChild(createItemCardElement(item));
+            });
+        }
+
+        // 特定のカードだけを更新するヘルパー（今回は全消去再描画のrenderWatchListで対応するが、チラつき防止のためDOM置換を行う）
+        function renderItemCard(item) {
+            const existingCard = document.getElementById(`card-${item.id}`);
+            const newCard = createItemCardElement(item);
+            if (existingCard) {
+                existingCard.replaceWith(newCard);
+            } else {
+                document.getElementById("watchListGrid").appendChild(newCard);
+            }
+        }
+
+        function createItemCardElement(item) {
+            const div = document.createElement("div");
+            div.id = `card-${item.id}`;
+            div.className = `torn-card rounded-lg p-4 shadow-lg border relative flex flex-col gap-3 ${item.isAlert ? 'border-red-500 price-alert bg-red-900/20' : 'border-gray-700'}`;
+
+            // Header
+            const header = `
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.image}" alt="${item.name}" class="w-12 h-12 object-contain bg-gray-600 rounded p-1">
+                        <div>
+                            <h3 class="font-bold text-lg leading-tight">
+                                <a href="https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${item.id}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-400 transition flex items-center gap-1" title="Tornで開く">
+                                    ${item.name}
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-70"></i>
+                                </a>
+                            </h3>
+                            <div class="text-xs text-gray-400">NPC売値: ${formatMoney(item.sellPrice)}</div>
+                        </div>
+                    </div>
+                    <button onclick="removeFromWatchList('${item.id}')" class="text-gray-500 hover:text-red-400 transition" title="リストから削除">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            // Target Price & Status
+            const status = `
+                <div class="flex justify-between items-center bg-gray-800 p-2 rounded">
+                    <div>
+                        <span class="text-xs text-gray-400 block">通知ライン</span>
+                        <span class="font-bold text-blue-400"><= ${formatMoney(item.targetPrice)}</span>
+                    </div>
+                    <div class="text-right">
+                         ${item.loading ? '<div class="loader inline-block w-4 h-4 border-2"></div>' : 
+                           item.error ? '<i class="fa-solid fa-triangle-exclamation text-red-500" title="' + item.error + '"></i>' : 
+                           '<span class="text-xs text-gray-500">' + (item.lastUpdate ? new Date(item.lastUpdate).toLocaleTimeString() : '待機中') + '</span>'}
+                    </div>
+                </div>
+            `;
+
+            // Market Table
+            let tableContent = "";
+            if (item.listings.length === 0) {
+                tableContent = `
+                    <div class="text-center text-gray-500 py-4 text-sm">
+                        ${item.error ? 'データ取得失敗' : 'データなし / 待機中'}
+                    </div>
+                `;
+            } else {
+                tableContent = `
+                    <table class="w-full text-sm mt-2">
+                        <thead class="text-xs text-gray-400 border-b border-gray-600">
+                            <tr>
+                                <th class="text-left pb-1">価格</th>
+                                <th class="text-right pb-1">数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${item.listings.map((list, idx) => {
+                                const isHit = list.price <= item.targetPrice;
+                                return `
+                                <tr class="${isHit ? 'text-green-400 font-bold' : ''}">
+                                    <td class="py-1">${formatMoney(list.price)}</td>
+                                    <td class="text-right py-1">x${list.amount.toLocaleString()}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            div.innerHTML = header + status + tableContent;
+            return div;
+        }
+
+    </script>
+</body>
+</html>
